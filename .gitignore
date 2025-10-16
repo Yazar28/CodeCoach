@@ -1,0 +1,37 @@
+# Node / frontend
+ui/node_modules/
+ui/dist/
+ui/.vite/
+*.log
+
+# VSCode/IDE
+.vscode/
+.idea/
+
+# CMake / C++ builds
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+*.user
+*.pro.user
+*.qbs.user
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+*.exp
+*.o
+
+# Visual Studio
+.vs/
+Debug/
+Release/
+x64/
+x86/
+
+# Misc
+.DS_Store
+Thumbs.db

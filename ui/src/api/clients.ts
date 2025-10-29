@@ -5,7 +5,7 @@ import axios from "axios";
 
 /** ========= Toggles por servicio ========= */
 const USE_MOCK_PM   = false; // ← PM real (ya lo tenemos en C++)
-const USE_MOCK_EVAL = true;  // ← por ahora mock
+const USE_MOCK_EVAL = false;  // ← por ahora mock
 const USE_MOCK_ANA  = true;  // ← por ahora mock
 
 /** ========= Axios por servicio ========= */

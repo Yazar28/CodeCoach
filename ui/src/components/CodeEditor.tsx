@@ -1,13 +1,35 @@
-import Editor from '@monaco-editor/react'
+import Editor from '@monaco-editor/react';
+
+type CodeEditorProps = {
+  language: 'cpp' | 'python' | 'java';
+  value: string;
+  onChange: (v: string | undefined) => void;
+  /** Altura opcional (ej. "300px", "50vh"). Por defecto 300px. */
+  height?: string;
+  className?: string;
+};
 
 export default function CodeEditor({
-  language, value, onChange
-}: { language:'cpp'|'python'|'java'; value:string; onChange:(v:string|undefined)=>void }) {
-  const monacoLang = language === 'cpp' ? 'cpp' : language === 'python' ? 'python' : 'java'
+  language,
+  value,
+  onChange,
+  height = '300px',
+  className,
+}: CodeEditorProps) {
   return (
-    <div style={{ border:'1px solid #ddd', borderRadius:8, overflow:'hidden' }}>
-      <Editor height="360px" language={monacoLang} value={value} onChange={onChange}
-        options={{ fontSize:14, minimap:{ enabled:false } }} />
+    <div className={className} style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'hidden' }}>
+      <Editor
+        height={height}
+        language={language}
+        value={value}
+        onChange={onChange}
+        options={{
+          minimap: { enabled: false },
+          fontSize: 14,
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+        }}
+      />
     </div>
-  )
+  );
 }

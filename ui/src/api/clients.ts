@@ -65,6 +65,7 @@ export interface SubmissionResult {
   timeMs?: number;
   memoryKB?: number;
   compileErrors?: string;
+  note?: string; 
 }
 
 export interface AnalysisPayload {

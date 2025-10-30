@@ -10,12 +10,20 @@ export default function ProblemDetailPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const [lang] = useState<'cpp'>('cpp')
-  const [source, setSource] = useState<string>(`#include <bits/stdc++.h>
+  const [source, setSource] = useState<string>(
+`#include <vector>
+#include <unordered_map>
 using namespace std;
-int main(){
+
+// Implementa la función pedida por el problema:
+vector<int> twoSum(const vector<int>& nums, int target) {
   // tu código aquí
-  return 0;
-}`)
+  return {};
+}`
+);
+
+
+
 
   const { data: problem, isLoading, error } = useQuery({
     queryKey: ['problem', id],

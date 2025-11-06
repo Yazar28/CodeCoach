@@ -43,6 +43,25 @@ int main() {
         }
       })
     };
+    // Después del Two Sum (línea ~40), agrega:
+
+    DB["reverse-string"] = Problem{
+   "reverse-string",
+   "Reverse String",
+   "easy",
+   {"string", "two-pointers"},
+   "Escribe una función que invierta un string in-place. Debes modificar el array original sin retornar nada.\n\nEjemplo:\nInput: s = [\"h\",\"e\",\"l\",\"l\",\"o\"]\nOutput: [\"o\",\"l\",\"l\",\"e\",\"h\"]\n\nTu código debe implementar:\nvoid reverseString(vector<char>& s) {\n    // tu código aquí\n}",
+   json::array({
+     json{
+       {"in", json{{"s", json::array({"h","e","l","l","o"})}}},
+       {"out", json::array({"o","l","l","e","h"})}
+     },
+     json{
+       {"in", json{{"s", json::array({"H","a","n","n","a","h"})}}},
+       {"out", json::array({"h","a","n","n","a","H"})}
+     }
+   })
+    };
 
     auto to_summary = [](const Problem& p) {
         return json{

@@ -10,20 +10,39 @@ export default function ProblemDetailPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const [lang] = useState<'cpp'>('cpp')
-  const [source, setSource] = useState<string>(
-`#include <vector>
+  
+  const getDefaultCode = (problemId?: string) => {
+    switch(problemId) {
+      case 'two-sum':
+        return `#include <vector>
 #include <unordered_map>
 using namespace std;
 
-// Implementa la función pedida por el problema:
 vector<int> twoSum(const vector<int>& nums, int target) {
   // tu código aquí
   return {};
-}`
-);
+}`;
+      
+      case 'reverse-string':
+        return `#include <vector>
+using namespace std;
 
+void reverseString(vector<char>& s) {
+    // tu código aquí
+}`;
+      
+      default:
+        return `#include <iostream>
+using namespace std;
 
+int main() {
+    // tu código aquí
+    return 0;
+}`;
+    }
+  };
 
+  const [source, setSource] = useState<string>(getDefaultCode(id));
 
   const { data: problem, isLoading, error } = useQuery({
     queryKey: ['problem', id],
@@ -32,9 +51,13 @@ vector<int> twoSum(const vector<int>& nums, int target) {
   })
 
   const submit = useMutation<SubmissionCreated, Error, void>({
-    mutationFn: async () => submitSolution({ problemId: id!, lang, source }),
-    onSuccess: (res) => nav(`/submissions/${res.submissionId}`),
-  })
+  mutationFn: async () => submitSolution({ problemId: id!, lang, source }),
+  onSuccess: (res) => {
+    const url = `/submissions/${res.submissionId}?problemId=${id}`;
+    console.log('🚀 NAVEGANDO A:', url);
+    nav(url);
+  },
+});
 
   if (isLoading) return <p style={{ padding: 16 }}>Cargando…</p>
   if (error || !problem) return <p style={{ padding: 16 }}>No se pudo cargar el problema.</p>
@@ -50,13 +73,13 @@ vector<int> twoSum(const vector<int>& nums, int target) {
 
       <section>
         <h3>Enunciado</h3>
-        <p>{problem.statement}</p>
+        <p style={{ whiteSpace: 'pre-wrap' }}>{problem.statement}</p>
       </section>
 
       <section>
         <h3>Ejemplos</h3>
         <pre style={{ background: '#f6f6f6', padding: 12, borderRadius: 8 }}>
-{JSON.stringify(problem.examples, null, 2)}
+          {JSON.stringify(problem.examples, null, 2)}
         </pre>
       </section>
 

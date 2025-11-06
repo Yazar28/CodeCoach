@@ -1,10 +1,8 @@
-// ui/src/pages/SubmissionPage.tsx
-import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { getSubmission, analyzeSolution } from '../api/clients'
 import { useEffect, useState } from 'react'
 
-// Opcional: define el shape del análisis si no lo tienes en ../types
 type AnalysisRes = {
   hints: string[];
   probablePatterns?: string[];
@@ -16,29 +14,39 @@ export default function SubmissionPage() {
   const nav = useNavigate()
   const [analysis, setAnalysis] = useState<AnalysisRes | null>(null)
 
+  // Obtener problemId de la URL - FORMA CORRECTA
+  const urlParams = new URLSearchParams(window.location.search);
+  const problemId = urlParams.get('problemId') || 'unknown';
+
+  // DEBUG
+  console.log('Submission ID:', id);
+  console.log('Problem ID from URL:', problemId);
+  console.log('Full URL:', window.location.href);
+
   const { data: sub, isLoading, isFetching } = useQuery({
     queryKey: ['submission', id],
     queryFn: () => getSubmission(id!),
     enabled: !!id,
     refetchInterval: (q) => {
       const s = q.state.data as any
-      return !s || s.status !== 'done' ? 800 : false
+      return !s || s.status !== 'done' ? 2000 : false
     }
   })
 
   useEffect(() => {
     async function run() {
       if (sub && sub.status === 'done' && !analysis) {
-        // Enviamos el objeto completo de la submission (coincide con clients.ts)
+        console.log('Enviando al Analyzer - problemId:', problemId);
         const a = await analyzeSolution({
-          source: '// omitido en UI',
-          results: sub
+          source: '// código del usuario',
+          results: sub,
+          problemId: problemId
         })
         setAnalysis(a)
       }
     }
     run()
-  }, [sub, analysis])
+  }, [sub, analysis, problemId])
 
   if (isLoading || !sub) return <p style={{padding:16}}>Cargando…</p>
 
@@ -60,10 +68,8 @@ export default function SubmissionPage() {
             <ul>
               {sub.results?.map((r, i) => (
                 <li key={i}>
-                  {/* r.name no existe; usamos el índice/case */}
                   Caso {typeof r.case === 'number' ? r.case : i + 1}: {r.pass ? '✔️ PASS' : '❌ FAIL'}
                   {typeof r.timeMs === 'number' ? ` · ${r.timeMs} ms` : ''}
-                  {/* memoryKB no existe por-caso; si quieres mostrar stdout: */}
                   {r.stdout ? ` · out: ${r.stdout}` : ''}
                 </li>
               ))}

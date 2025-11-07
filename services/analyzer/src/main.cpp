@@ -1,9 +1,10 @@
 #include <iostream>
 #include <string>
-#include <unordered_map>
+#include <vector>          // <-- faltaba
+#include <unordered_map>   // (puedes quitarlo si no lo usas)
 
-#include "../third_party/httplib.h"
-#include "../third_party/json.hpp"
+#include "httplib.h"       // en vez de ../third_party/...
+#include "json.hpp"
 using json = nlohmann::json;
 
 struct AnalysisRequest {
@@ -24,31 +25,26 @@ static void set_cors(httplib::Response& res) {
     res.set_header("Access-Control-Allow-Headers", "Content-Type");
 }
 
-// Análisis predefinido por problema
 static AnalysisResult analyze_two_sum(const AnalysisRequest& req) {
     bool all_passed = true;
     if (req.results.contains("results")) {
         for (const auto& r : req.results["results"]) {
-            if (r.contains("pass") && !r["pass"]) {
-                all_passed = false;
-                break;
-            }
+            if (r.contains("pass") && !r["pass"]) { all_passed = false; break; }
         }
     }
-
     if (all_passed) {
-        return AnalysisResult{
+        return {
             {"¡Excelente! Has resuelto Two Sum correctamente.",
              "Podrías intentar optimizar el uso de memoria."},
-            {"hashmap", "two-pointers"},
+            {"hashmap","two-pointers"},
             "O(n)"
         };
     }
     else {
-        return AnalysisResult{
-            {"Piensa en usar un mapa para almacenar los números y sus índices.",
-             "Recuerda que necesitas encontrar dos números que sumen al target.",
-             "Considera qué estructura de datos te permite búsquedas rápidas."},
+        return {
+            {"Piensa en usar un mapa para almacenar valor→índice.",
+             "Evita reutilizar el mismo elemento dos veces.",
+             "Busca reducir a O(n) con búsqueda O(1)."},
             {"hashmap"},
             "O(n) esperada"
         };
@@ -59,27 +55,23 @@ static AnalysisResult analyze_reverse_string(const AnalysisRequest& req) {
     bool all_passed = true;
     if (req.results.contains("results")) {
         for (const auto& r : req.results["results"]) {
-            if (r.contains("pass") && !r["pass"]) {
-                all_passed = false;
-                break;
-            }
+            if (r.contains("pass") && !r["pass"]) { all_passed = false; break; }
         }
     }
-
     if (all_passed) {
-        return AnalysisResult{
-            {"¡Bien hecho! Reverse String resuelto correctamente.",
-             "¿Podrías hacerlo recursivamente?"},
-            {"two-pointers", "in-place"},
+        return {
+            {"¡Bien hecho! Pasaste los casos.",
+             "¿Puedes implementar también una versión recursiva?"},
+            {"two-pointers","in-place"},
             "O(n)"
         };
     }
     else {
-        return AnalysisResult{
-            {"Intenta usar el enfoque de dos punteros: uno al inicio y otro al final.",
-             "Recuerda que debes modificar el array in-place, sin crear uno nuevo.",
-             "Intercambia los caracteres mientras los punteros se acercan."},
-            {"two-pointers", "in-place"},
+        return {
+            {"Usa dos punteros (inicio/fin) e intercambia en cada paso.",
+             "Hazlo in-place sin crear otro arreglo.",
+             "Cuidado con el límite cuando los punteros se cruzan."},
+            {"two-pointers","in-place"},
             "O(n) esperada"
         };
     }
@@ -88,68 +80,49 @@ static AnalysisResult analyze_reverse_string(const AnalysisRequest& req) {
 int main() {
     httplib::Server svr;
 
-    // CORS preflight
+    // Preflight
     svr.Options(R"(/.*)", [](const httplib::Request&, httplib::Response& res) {
+        set_cors(res); res.status = 200;
+        });
+
+    // Health
+    svr.Get("/health", [](const httplib::Request&, httplib::Response& res) {
         set_cors(res);
-        res.status = 200;
+        res.set_content(R"({"ok":true})", "application/json");
         });
 
     // POST /analysis
     svr.Post("/analysis", [](const httplib::Request& req, httplib::Response& res) {
         set_cors(res);
-
         json body;
-        try {
-            body = json::parse(req.body);
-        }
-        catch (...) {
-            res.status = 400;
-            res.set_content(R"({"error":"invalid json"})", "application/json");
-            return;
-        }
+        try { body = json::parse(req.body); }
+        catch (...) { res.status = 400; res.set_content(R"({"error":"invalid json"})", "application/json"); return; }
 
         if (!body.contains("source") || !body.contains("results")) {
-            res.status = 400;
-            res.set_content(R"({"error":"missing source or results"})", "application/json");
-            return;
+            res.status = 400; res.set_content(R"({"error":"missing source or results"})", "application/json"); return;
         }
 
-        AnalysisRequest analysis_req;
-        analysis_req.source = body.value("source", "");
-        analysis_req.results = body.value("results", json::object());
-        analysis_req.problemId = body.value("problemId", "");
+        AnalysisRequest areq;
+        areq.source = body.value("source", "");
+        areq.results = body.value("results", json::object());
+        areq.problemId = body.value("problemId", "");
 
-        AnalysisResult result;
+        AnalysisResult ar;
+        if (areq.problemId == "two-sum")         ar = analyze_two_sum(areq);
+        else if (areq.problemId == "reverse-string") ar = analyze_reverse_string(areq);
+        else ar = { {"Revisa la lógica y cubre casos borde."},{"unknown"},"O(?)" };
 
-        // Seleccionar análisis según el problema
-        if (analysis_req.problemId == "two-sum") {
-            result = analyze_two_sum(analysis_req);
-        }
-        else if (analysis_req.problemId == "reverse-string") {
-            result = analyze_reverse_string(analysis_req);
-        }
-        else {
-            // Análisis genérico para problemas desconocidos
-            result = AnalysisResult{
-                {"Revisa la lógica de tu solución.", "Considera casos edge."},
-                {"unknown"},
-                "O(?)"
-            };
-        }
-
-        json response = {
-            {"hints", result.hints},
-            {"probablePatterns", result.probablePatterns},
-            {"complexityEstimate", result.complexityEstimate}
+        json out = {
+          {"hints", ar.hints},
+          {"probablePatterns", ar.probablePatterns},
+          {"complexityEstimate", ar.complexityEstimate}
         };
-
-        res.set_content(response.dump(), "application/json");
+        res.set_content(out.dump(), "application/json");
         });
 
     std::cout << "[ANA] Analyzer escuchando en http://localhost:8083\n";
     if (!svr.listen("0.0.0.0", 8083)) {
-        std::cerr << "No se pudo abrir el puerto 8083\n";
-        return 1;
+        std::cerr << "No se pudo abrir el puerto 8083\n"; return 1;
     }
     return 0;
 }

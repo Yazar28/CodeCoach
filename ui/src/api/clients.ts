@@ -71,6 +71,7 @@ export interface SubmissionResult {
 export interface AnalysisPayload {
   source: string;
   results?: SubmissionResult;
+  problemId?: string;      
 }
 
 export interface AnalysisResult {

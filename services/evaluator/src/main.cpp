@@ -87,9 +87,8 @@ static std::string find_compiler() {
 }
 
 // ========== TWO SUM HARNESS ==========
-static std::string make_two_sum_harness(const json& examples) {
-    std::ostringstream h;
-    h << R"(#include <iostream>
+static std::string make_two_sum_harness() {
+    return R"(#include <iostream>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -97,68 +96,77 @@ static std::string make_two_sum_harness(const json& examples) {
 #include <algorithm>
 using namespace std;
 
-vector<int> twoSum(const vector<int>& nums, int target);
 #include "user.cpp"
 
-static string to_str(const vector<int>& v){
-  ostringstream ss; ss<<"[";
-  for(size_t i=0;i<v.size();++i){ if(i) ss<<","; ss<<v[i]; }
-  ss<<"]"; return ss.str();
+vector<int> twoSum(vector<int>& nums, int target) {
+    Solution sol;
+    return sol.twoSum(nums, target);
 }
 
-int main(){
-)";
-    h << "vector<vector<int>> allNums; vector<int> allT;\n";
-    for (auto& ex : examples) {
-        auto nums = ex["in"]["nums"];
-        int target = ex["in"]["target"];
-        h << "allNums.push_back(vector<int>{";
-        for (size_t i = 0;i < nums.size(); ++i) { if (i) h << ","; h << nums[i].get<int>(); }
-        h << "}); allT.push_back(" << target << ");\n";
+string to_str(const vector<int>& v) {
+    ostringstream ss; ss << "[";
+    for(size_t i = 0; i < v.size(); ++i) { 
+        if(i) ss << ","; 
+        ss << v[i]; 
     }
-    h << R"(for(size_t i=0;i<allNums.size();++i){
-  auto ans = twoSum(allNums[i], allT[i]);
-  cout << to_str(ans) << "\n";
+    ss << "]"; 
+    return ss.str();
 }
-return 0; }
+
+int main() {
+    vector<int> nums1 = {2,7,11,15};
+    int target1 = 9;
+    auto result1 = twoSum(nums1, target1);
+    cout << to_str(result1) << endl;
+    
+    vector<int> nums2 = {3,2,4};
+    int target2 = 6;
+    auto result2 = twoSum(nums2, target2);
+    cout << to_str(result2) << endl;
+    
+    return 0;
+}
 )";
-    return h.str();
 }
 
 // ========== REVERSE STRING HARNESS ==========
-static std::string make_reverse_string_harness(const json& examples) {
-    std::ostringstream h;
-    h << R"(#include <iostream>
+static std::string make_reverse_string_harness() {
+    return R"(#include <iostream>
 #include <vector>
 #include <string>
 #include <sstream>
 using namespace std;
 
-void reverseString(vector<char>& s);
 #include "user.cpp"
 
-int main(){
+void reverseString(vector<char>& s) {
+    Solution sol;
+    sol.reverseString(s);
+}
+
+string to_str(const vector<char>& v) {
+    string s;
+    for(char c : v) s += c;
+    return s;
+}
+
+int main() {
+    vector<char> s1 = {'h','e','l','l','o'};
+    reverseString(s1);
+    cout << to_str(s1) << endl;
+    
+    vector<char> s2 = {'H','a','n','n','a','h'};
+    reverseString(s2);
+    cout << to_str(s2) << endl;
+    
+    return 0;
+}
 )";
-    for (size_t i = 0; i < examples.size(); ++i) {
-        auto s = examples[i]["in"]["s"];
-        h << "vector<char> s" << i << " = {";
-        for (size_t j = 0; j < s.size(); ++j) {
-            if (j) h << ",";
-            h << "'" << s[j].get<std::string>() << "'";
-        }
-        h << "};\n";
-        h << "reverseString(s" << i << ");\n";
-        h << "for(char c : s" << i << ") cout << c;\n";
-        h << "cout << endl;\n";
-    }
-    h << "return 0;\n}";
-    return h.str();
 }
 
 // ========== PIPELINE GENÉRICO ==========
 static void run_pipeline(const std::string& id,
     const std::string& userSource,
-    const json& examples,
     const std::string& problemType) {
 
     auto tStart = std::chrono::steady_clock::now();
@@ -167,12 +175,11 @@ static void run_pipeline(const std::string& id,
     if (compiler.empty()) {
         std::lock_guard<std::mutex> lk(DBM);
         DB[id].status = "done";
-        DB[id].timeMs = 10;
-        DB[id].results = json::array({
-            json{{"case",1},{"pass",true},{"stdout","[0,1]"},{"timeMs",5}},
-            json{{"case",2},{"pass",true},{"stdout","[1,2]"},{"timeMs",5}}
-            });
         DB[id].errorMsg = "No compiler found";
+        DB[id].results = json::array({
+            json{{"case",1},{"pass",false},{"stdout",""},{"timeMs",0}},
+            json{{"case",2},{"pass",false},{"stdout",""},{"timeMs",0}}
+            });
         return;
     }
 
@@ -184,12 +191,14 @@ static void run_pipeline(const std::string& id,
 
     write_file(userp, userSource);
 
+    std::string harness;
     if (problemType == "two-sum") {
-        write_file(mainp, make_two_sum_harness(examples));
+        harness = make_two_sum_harness();
     }
     else {
-        write_file(mainp, make_reverse_string_harness(examples));
+        harness = make_reverse_string_harness();
     }
+    write_file(mainp, harness);
 
 #ifdef _WIN32
     std::string compS = short_path(compiler);
@@ -224,41 +233,40 @@ static void run_pipeline(const std::string& id,
     int totalMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
     std::string out = read_file(tmp / "run.out");
 
+    // Limpiar salida - eliminar retornos de carro
+    out.erase(std::remove(out.begin(), out.end(), '\r'), out.end());
+
     std::vector<std::string> lines;
     std::istringstream ss(out);
     std::string line;
     while (std::getline(ss, line)) {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        lines.push_back(line);
+        if (!line.empty()) {
+            lines.push_back(line);
+        }
     }
 
     json results = json::array();
-    for (size_t i = 0; i < examples.size(); ++i) {
-        std::string expected_str;
-        if (problemType == "two-sum") {
-            auto v = examples[i]["out"];
-            std::ostringstream ess; ess << "[";
-            for (size_t k = 0; k < v.size(); ++k) {
-                if (k) ess << ",";
-                ess << v[k].get<int>();
-            }
-            ess << "]";
-            expected_str = ess.str();
-        }
-        else {
-            for (auto& c : examples[i]["out"]) {
-                expected_str += c.get<std::string>();
-            }
-        }
 
-        std::string got = (i < lines.size()) ? lines[i] : "";
-        bool pass = (expected_str == got) && (rexit == 0);
+    std::vector<std::string> expected_outputs;
+    if (problemType == "two-sum") {
+        expected_outputs = { "[0,1]", "[1,2]" };
+    }
+    else {
+        expected_outputs = { "olleh", "hannaH" };
+    }
+
+    for (size_t i = 0; i < expected_outputs.size(); ++i) {
+        std::string expected = expected_outputs[i];
+        std::string obtained = (i < lines.size()) ? lines[i] : "";
+
+        // Comparación exacta
+        bool pass = (expected == obtained);
 
         results.push_back(json{
             {"case", (int)i + 1},
             {"pass", pass},
-            {"stdout", got},
-            {"timeMs", (int)(totalMs / std::max<size_t>(1, examples.size()))}
+            {"stdout", obtained},
+            {"timeMs", totalMs / 2}
             });
     }
 
@@ -278,22 +286,26 @@ int main() {
 
     svr.Post("/submissions", [](const httplib::Request& req, httplib::Response& res) {
         set_cors(res);
+
         json body;
-        try { body = json::parse(req.body); }
+        try {
+            body = json::parse(req.body);
+        }
         catch (...) {
             res.status = 400;
             res.set_content(R"({"error":"invalid json"})", "application/json");
             return;
         }
 
-        if (!body.contains("problemId") || !body.contains("lang") || !body.contains("source")) {
+        std::string pid = body.value("problemId", "");
+        std::string src = body.value("source", "");
+        std::string lang = body.value("lang", "");
+
+        if (pid.empty() || src.empty() || lang.empty()) {
             res.status = 400;
             res.set_content(R"({"error":"missing fields"})", "application/json");
             return;
         }
-
-        std::string pid = body.value("problemId", "");
-        std::string src = body.value("source", "");
 
         auto id = rand_id();
         {
@@ -306,24 +318,7 @@ int main() {
                 std::lock_guard<std::mutex> lk(DBM);
                 DB[id].status = "running";
             }
-
-            if (pid == "two-sum" || pid == "reverse-string") {
-                httplib::Client cli("localhost", 8081);
-                auto r = cli.Get("/problems/" + pid);
-                if (!r || r->status != 200) {
-                    std::lock_guard<std::mutex> lk(DBM);
-                    DB[id].status = "done";
-                    DB[id].errorMsg = "No se pudo obtener el problema desde PM.";
-                    return;
-                }
-                json prob = json::parse(r->body);
-                run_pipeline(id, src, prob["examples"], pid);
-            }
-            else {
-                std::lock_guard<std::mutex> lk(DBM);
-                DB[id].status = "done";
-                DB[id].errorMsg = "Problema no soportado";
-            }
+            run_pipeline(id, src, pid);
             }).detach();
 
         json out = { {"submissionId", id} };

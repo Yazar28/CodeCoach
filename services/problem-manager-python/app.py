@@ -11,7 +11,7 @@ client = MongoClient('mongodb://localhost:27017/')
 db = client['codecoach']
 problems_collection = db['problems']
 
-# Datos de ejemplo - FORMATO CORREGIDO
+# Datos de ejemplo
 sample_problems = [
     {
         "id": "two-sum",
@@ -26,7 +26,7 @@ sample_problems = [
                 "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1]."
             }
         ],
-        "starterCode": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // Tu código aquí\n    }\n};",
+        "starterCode": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // tu código aquí\n    }\n};",
         "testCases": [
             {
                 "in": {"nums": [2,7,11,15], "target": 9},
@@ -51,7 +51,7 @@ sample_problems = [
                 "explanation": "The string is reversed in place."
             }
         ],
-        "starterCode": "class Solution {\npublic:\n    void reverseString(vector<char>& s) {\n        // Tu código aquí\n    }\n};",
+        "starterCode": "class Solution {\npublic:\n    void reverseString(vector<char>& s) {\n        // tu código aquí\n    }\n};",
         "testCases": [
             {
                 "in": {"s": ["h","e","l","l","o"]},
@@ -65,10 +65,10 @@ sample_problems = [
     }
 ]
 
-# Poblar la base de datos - SIEMPRE
+# Poblar la base de datos
 problems_collection.delete_many({})
 problems_collection.insert_many(sample_problems)
-print("✅ 2 problemas insertados en MongoDB: Two Sum y Reverse String")
+print("✅ 2 problemas insertados en MongoDB")
 
 # Endpoints
 @app.route('/problems', methods=['GET'])

@@ -19,8 +19,9 @@ export default function ProblemDetailPage() {
 using namespace std;
 
 vector<int> twoSum(const vector<int>& nums, int target) {
-  // tu código aquí
-  return {};
+  // ❌ ESTE CÓDIGO FALLARÁ GARANTIZADO
+  // El array [-999, -999] nunca será la respuesta correcta
+  return {-999, -999};
 }`;
       
       case 'reverse-string':
@@ -28,7 +29,11 @@ vector<int> twoSum(const vector<int>& nums, int target) {
 using namespace std;
 
 void reverseString(vector<char>& s) {
-    // tu código aquí
+    // ❌ ESTE CÓDIGO FALLARÁ GARANTIZADO  
+    // Cambia el array a algo completamente incorrecto
+    for (int i = 0; i < s.size(); i++) {
+        s[i] = 'X';  // Convierte todo en 'X' - nunca será correcto
+    }
 }`;
       
       default:
@@ -51,13 +56,13 @@ int main() {
   })
 
   const submit = useMutation<SubmissionCreated, Error, void>({
-  mutationFn: async () => submitSolution({ problemId: id!, lang, source }),
-  onSuccess: (res) => {
-    const url = `/submissions/${res.submissionId}?problemId=${id}`;
-    console.log('🚀 NAVEGANDO A:', url);
-    nav(url);
-  },
-});
+    mutationFn: async () => submitSolution({ problemId: id!, lang, source }),
+    onSuccess: (res) => {
+      const url = `/submissions/${res.submissionId}?problemId=${id}`;
+      console.log('🚀 NAVEGANDO A:', url);
+      nav(url);
+    },
+  });
 
   if (isLoading) return <p style={{ padding: 16 }}>Cargando…</p>
   if (error || !problem) return <p style={{ padding: 16 }}>No se pudo cargar el problema.</p>

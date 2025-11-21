@@ -1,5 +1,9 @@
+// ui/src/types.ts
+
+// Dificultad de los problemas
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
+// Resumen que se usa en la lista de problemas
 export interface ProblemSummary {
   id: string
   title: string
@@ -7,26 +11,64 @@ export interface ProblemSummary {
   tags: string[]
 }
 
-export interface ExampleIO { in: any; out: any }
+// Entrada/salida de ejemplos y tests
+export interface ExampleIO {
+  in: any
+  out: any
+}
 
+// Problema completo que viene del Problem Manager (PM)
 export interface Problem extends ProblemSummary {
   statement: string
   examples: ExampleIO[]
   constraints?: Record<string, any>
-  tests: ExampleIO[]           // (ocultos al usuario; los usa el evaluador)
+  starterCode?: string          // código base para el editor
+  tests: ExampleIO[]            // casos que luego usará el Evaluator
 }
 
-export interface PostSubmissionReq { problemId: string; lang: 'cpp'|'python'|'java'; source: string }
-export interface PostSubmissionRes { submissionId: string }
+// ======= Evaluator / Submissions =======
 
-export interface TestResult { name: string; pass: boolean; timeMs?: number; memoryKB?: number; stderr?: string }
+// Lo que enviamos al Evaluator al hacer "Enviar"
+export interface PostSubmissionReq {
+  problemId: string
+  // por ahora solo C++ está soportado
+  lang: 'cpp'
+  source: string
+}
+
+export interface PostSubmissionRes {
+  submissionId: string
+}
+
+// Resultado de cada caso de prueba que devuelve el Evaluator
+export interface EvalCaseResult {
+  case: number          // 1, 2, ...
+  pass: boolean
+  stdout?: string
+  timeMs?: number
+}
+
+// Estado completo de una ejecución (/submissions/:id)
 export interface SubmissionStatus {
-  status: 'queued' | 'running' | 'done' | 'error'
-  results?: TestResult[]
+  status: 'queued' | 'running' | 'done'
+  results?: EvalCaseResult[]
   timeMs?: number
   memoryKB?: number
-  compileErrors?: string
+  note?: string          // mensajes de error, compilación, etc.
 }
 
-export interface AnalysisReq { source: string; results: TestResult[]; metrics?: { timeMs?: number; memoryKB?: number } }
-export interface AnalysisRes { hints: string[]; probablePatterns?: string[]; complexityEstimate?: string }
+// ======= Analyzer / LLM Coach =======
+
+// Lo que le mandamos al Analyzer
+export interface AnalysisReq {
+  source: string               // código del usuario (o un resumen)
+  results: SubmissionStatus    // resultado que viene del Evaluator
+  problemId: string
+}
+
+// Lo que devuelve el Analyzer
+export interface AnalysisRes {
+  hints: string[]
+  probablePatterns?: string[]
+  complexityEstimate?: string
+}

@@ -1,190 +1,83 @@
 // ui/src/api/clients.ts
-// Cliente de APIs + toggles de mock por servicio
+import type {
+  ProblemSummary,
+  Problem,
+  PostSubmissionReq,
+  PostSubmissionRes,
+  SubmissionStatus,
+  AnalysisReq,
+  AnalysisRes,
+} from '../types'
 
-import axios from "axios";
+// URLs base de cada microservicio
+const PM_BASE = 'http://localhost:8081' // Problem Manager (Python + Mongo)
+const EV_BASE = 'http://localhost:8082' // Evaluator (C++)
+const AN_BASE = 'http://localhost:8083' // Analyzer (C++)
 
-/** ========= Toggles por servicio ========= */
-const USE_MOCK_PM   = false; // ← PM real (ya lo tenemos en C++)
-const USE_MOCK_EVAL = false;   // ← ACTIVAR MOCK
-const USE_MOCK_ANA  = false;  // ← por ahora mock
+// Helper genérico para hacer fetch y parsear JSON tipado
+async function jsonFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options?.headers || {}),
+    },
+  })
 
-/** ========= Axios por servicio ========= */
-export const pm = axios.create({
-  baseURL: import.meta.env.VITE_API_PM || "http://localhost:8081",
-});
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Error HTTP ${res.status} en ${url}: ${text}`)
+  }
 
-const evalApi = axios.create({
-  baseURL: import.meta.env.VITE_API_EVAL || "http://localhost:8082",
-});
-
-const anaApi = axios.create({
-  baseURL: import.meta.env.VITE_API_ANALYZER || "http://localhost:8083",
-});
-
-/** ========= Tipos mínimos ========= */
-type Difficulty = "easy" | "medium" | "hard";
-
-export interface ProblemSummary {
-  id: string;
-  title: string;
-  difficulty: Difficulty;
-  tags: string[];
+  return (await res.json()) as T
 }
 
-export interface Example {
-  in: any;  // para MVP mantenemos flexible
-  out: any;
-}
+// =========== PROBLEM MANAGER ===========
 
-export interface ProblemDetail extends ProblemSummary {
-  statement: string;
-  examples: Example[];
-}
-
-export interface SubmissionPayload {
-  problemId: string;
-  lang: "cpp" | "python" | "java";
-  source: string;
-}
-
-export interface SubmissionCreated {
-  submissionId: string;
-}
-
-export type RunStatus = "queued" | "running" | "done" | "error";
-
-export interface SubmissionResult {
-  status: RunStatus;
-  results?: Array<{
-    case: number;
-    pass: boolean;
-    stdout?: string;
-    stderr?: string;
-    timeMs?: number;
-  }>;
-  timeMs?: number;
-  memoryKB?: number;
-  compileErrors?: string;
-  note?: string; 
-}
-
-export interface AnalysisPayload {
-  source: string;
-  results?: SubmissionResult;
-  problemId?: string;      
-}
-
-export interface AnalysisResult {
-  hints: string[];
-  probablePatterns?: string[];
-  complexityEstimate?: string;
-}
-
-/** ========= Mocks ========= */
-const MOCK_PROBLEMS: ProblemSummary[] = [
-  { id: "two-sum", title: "Two Sum", difficulty: "easy", tags: ["array", "hashmap"] },
-];
-
-const MOCK_PROBLEM_DETAIL: Record<string, ProblemDetail> = {
-  "two-sum": {
-    id: "two-sum",
-    title: "Two Sum",
-    difficulty: "easy",
-    tags: ["array", "hashmap"],
-    statement:
-      "Dado un arreglo nums y un entero target, retorna índices i y j tales que nums[i] + nums[j] = target. " +
-      "Asume una única solución y no reutilices el mismo elemento.",
-    examples: [
-      { in: { nums: [2, 7, 11, 15], target: 9 }, out: [0, 1] },
-      { in: { nums: [3, 2, 4], target: 6 }, out: [1, 2] },
-    ],
-  },
-};
-
-const MOCK_SUBMISSIONS: Record<string, SubmissionResult> = {};
-
-function createMockSubmission(): SubmissionCreated {
-  const id = `mock-${Math.random().toString(36).slice(2, 8)}`;
-  // ciclo de vida simulado
-  MOCK_SUBMISSIONS[id] = { status: "queued" };
-  setTimeout(() => (MOCK_SUBMISSIONS[id] = { status: "running" }), 400);
-  setTimeout(() => {
-    MOCK_SUBMISSIONS[id] = {
-      status: "done",
-      timeMs: 12,
-      memoryKB: 256,
-      results: [
-        { case: 1, pass: true, timeMs: 5, stdout: "[0,1]" },
-        { case: 2, pass: true, timeMs: 7, stdout: "[1,2]" },
-      ],
-    };
-  }, 1200);
-  return { submissionId: id };
-}
-
-/** ========= APIs: Problem Manager ========= */
-
+// Lista de problemas (se usa en ProblemsPage)
 export async function listProblems(): Promise<ProblemSummary[]> {
-  if (USE_MOCK_PM) {
-    return Promise.resolve(MOCK_PROBLEMS);
-  }
-  const { data } = await pm.get<ProblemSummary[]>("/problems");
-  return data;
+  return jsonFetch<ProblemSummary[]>(`${PM_BASE}/problems`)
 }
 
-export async function getProblem(id: string): Promise<ProblemDetail> {
-  if (USE_MOCK_PM) {
-    const p = MOCK_PROBLEM_DETAIL[id];
-    if (!p) throw new Error("Problem not found (mock)");
-    return Promise.resolve(p);
-  }
-  const { data } = await pm.get<ProblemDetail>(`/problems/${id}`);
-  return data;
+// Problema completo por id (se usa en ProblemDetailPage)
+export async function getProblem(id: string): Promise<Problem> {
+  return jsonFetch<Problem>(`${PM_BASE}/problems/${id}`)
 }
 
-/** ========= APIs: Evaluator ========= */
+// =========== EVALUATOR ===========
 
+// Crear una nueva ejecución de código
 export async function submitSolution(
-  payload: SubmissionPayload
-): Promise<SubmissionCreated> {
-  if (USE_MOCK_EVAL) {
-    return new Promise((r) => setTimeout(() => r(createMockSubmission()), 250));
-  }
-  const { data } = await evalApi.post<SubmissionCreated>("/submissions", payload);
-  return data;
+  body: PostSubmissionReq
+): Promise<PostSubmissionRes> {
+  return jsonFetch<PostSubmissionRes>(`${EV_BASE}/submissions`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export async function getSubmission(id: string): Promise<SubmissionResult> {
-  if (USE_MOCK_EVAL) {
-    // si aún no existe, seguiremos marcando "queued"
-    return new Promise((r) => setTimeout(() => r(MOCK_SUBMISSIONS[id] ?? { status: "queued" }), 250));
-  }
-  const { data } = await evalApi.get<SubmissionResult>(`/submissions/${id}`);
-  return data;
+// Consultar estado de una ejecución
+export async function getSubmission(id: string): Promise<SubmissionStatus> {
+  return jsonFetch<SubmissionStatus>(`${EV_BASE}/submissions/${id}`)
 }
 
-/** ========= APIs: Analyzer ========= */
+// =========== ANALYZER / COACH ===========
 
+// Enviar resultados + código al Analyzer
 export async function analyzeSolution(
-  payload: AnalysisPayload
-): Promise<AnalysisResult> {
-  if (USE_MOCK_ANA) {
-    return new Promise((r) =>
-      setTimeout(
-        () =>
-          r({
-            hints: [
-              "Piensa en un mapa de valor→índice para acelerar la búsqueda.",
-              "Cuidado con reutilizar el mismo índice dos veces.",
-              "La complejidad esperada es O(n) con espacio adicional O(n).",
-            ],
-            probablePatterns: ["hashmap", "two-pointers?"],
-            complexityEstimate: "O(n)",
-          }),
-        300
-      )
-    );
-  }
-  const { data } = await anaApi.post<AnalysisResult>("/analysis", payload);
-  return data;
+  body: AnalysisReq
+): Promise<AnalysisRes> {
+  return jsonFetch<AnalysisRes>(`${AN_BASE}/analysis`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+// Re-export de tipos útiles para que puedas hacer:
+//   import { listProblems, type ProblemSummary } from '../api/clients'
+export type {
+  ProblemSummary,
+  Problem,
+  SubmissionStatus,
+  AnalysisRes,
 }

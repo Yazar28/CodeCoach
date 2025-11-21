@@ -72,3 +72,14 @@ export interface AnalysisRes {
   probablePatterns?: string[]
   complexityEstimate?: string
 }
+
+export interface CreateProblemReq {
+  id: string
+  title: string
+  difficulty: Difficulty
+  tags: string[]
+  statement: string
+  examples: ExampleIO[]
+  starterCode?: string
+  tests: ExampleIO[]
+}

@@ -7,7 +7,9 @@ import type {
   SubmissionStatus,
   AnalysisReq,
   AnalysisRes,
+  CreateProblemReq, 
 } from '../types'
+
 
 // URLs base de cada microservicio
 const PM_BASE = 'http://localhost:8081' // Problem Manager (Python + Mongo)
@@ -44,6 +46,15 @@ export async function getProblem(id: string): Promise<Problem> {
   return jsonFetch<Problem>(`${PM_BASE}/problems/${id}`)
 }
 
+// Crear un problema nuevo (modo admin)
+export async function createProblem(
+  body: CreateProblemReq
+): Promise<{ id: string }> {
+  return jsonFetch<{ id: string }>(`${PM_BASE}/problems`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
 // =========== EVALUATOR ===========
 
 // Crear una nueva ejecución de código

@@ -164,6 +164,50 @@ int main() {
 )";
 }
 
+// ========== BINARY SEARCH HARNESS ==========
+static std::string make_binary_search_harness() {
+    return R"(#include <iostream>
+#include <vector>
+using namespace std;
+
+#include "user.cpp"
+
+// Wrapper que llama a Solution::search
+int search_wrapper(const vector<int>& nums, int target) {
+    Solution sol;
+    return sol.search(nums, target);
+}
+
+int main() {
+    {
+        vector<int> nums = {-1,0,3,5,9,12};
+        int target = 9;
+        int res = search_wrapper(nums, target);
+        cout << res << "\n";
+    }
+    {
+        vector<int> nums = {-1,0,3,5,9,12};
+        int target = 2;
+        int res = search_wrapper(nums, target);
+        cout << res << "\n";
+    }
+    {
+        vector<int> nums = {1};
+        int target = 1;
+        int res = search_wrapper(nums, target);
+        cout << res << "\n";
+    }
+    {
+        vector<int> nums = {1};
+        int target = 2;
+        int res = search_wrapper(nums, target);
+        cout << res << "\n";
+    }
+    return 0;
+}
+)";
+}
+
 // ========== PIPELINE GENÉRICO ==========
 static void run_pipeline(const std::string& id,
     const std::string& userSource,
@@ -195,8 +239,15 @@ static void run_pipeline(const std::string& id,
     if (problemType == "two-sum") {
         harness = make_two_sum_harness();
     }
-    else {
+    else if (problemType == "reverse-string") {
         harness = make_reverse_string_harness();
+    }
+    else if (problemType == "binary-search") {
+        harness = make_binary_search_harness();
+    }
+    else {
+        // fallback por si llega algo inesperado
+        harness = make_two_sum_harness();
     }
     write_file(mainp, harness);
 
@@ -251,8 +302,15 @@ static void run_pipeline(const std::string& id,
     if (problemType == "two-sum") {
         expected_outputs = { "[0,1]", "[1,2]" };
     }
-    else {
+    else if (problemType == "reverse-string") {
         expected_outputs = { "olleh", "hannaH" };
+    }
+    else if (problemType == "binary-search") {
+        // Debe coincidir con lo que imprime el harness
+        expected_outputs = { "4", "-1", "0", "-1" };
+    }
+    else {
+        expected_outputs = {};
     }
 
     for (size_t i = 0; i < expected_outputs.size(); ++i) {

@@ -78,24 +78,36 @@ export default function SubmissionPage() {
         )}
       </div>
 
-      {analysis && (
-        <div style={{ borderTop: '1px solid #eee', paddingTop: 8 }}>
-          <h3>Feedback del Coach</h3>
-          <ul>
-            {analysis.hints.map((h, i) => (<li key={i}>{h}</li>))}
-          </ul>
-          {analysis.probablePatterns?.length ? (
-            <div style={{ fontSize: 12, color: '#666' }}>
-              Patrones detectados: {analysis.probablePatterns.join(', ')}
-            </div>
-          ) : null}
-          {analysis.complexityEstimate ? (
-            <div style={{ fontSize: 12, color: '#666' }}>
-              Complejidad estimada: {analysis.complexityEstimate}
-            </div>
-          ) : null}
-        </div>
-      )}
+      <div style={{ borderTop: '1px solid #eee', paddingTop: 8 }}>
+        <h3>Feedback del Coach</h3>
+
+        {analysis ? (
+          <>
+            <ul>
+              {analysis.hints.map((h, i) => (
+                <li key={i}>{h}</li>
+              ))}
+            </ul>
+
+            {analysis.probablePatterns?.length ? (
+              <div style={{ fontSize: 12, color: '#666' }}>
+                Patrones detectados: {analysis.probablePatterns.join(', ')}
+              </div>
+            ) : null}
+
+            {analysis.complexityEstimate ? (
+              <div style={{ fontSize: 12, color: '#666' }}>
+                Complejidad estimada: {analysis.complexityEstimate}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p style={{ fontSize: 14, color: '#666' }}>
+            Cargando feedback del Coach (IA)…
+          </p>
+        )}
+      </div>
+
     </div>
   )
 }

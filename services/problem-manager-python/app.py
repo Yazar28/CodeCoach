@@ -98,9 +98,11 @@ sample_problems = [
 ]
 
 # Por ahora: limpiamos y sembramos siempre (útil en desarrollo)
-problems_collection.delete_many({})
-problems_collection.insert_many(sample_problems)
-print("✅ 2 problemas insertados en MongoDB")
+if problems_collection.count_documents({}) == 0:
+    problems_collection.insert_many(sample_problems)
+    print("✅ Colección vacía, 2 problemas insertados en MongoDB (seed inicial)")
+else:
+    print("ℹ️ Colección ya tiene problemas, no se ejecuta el seed inicial")
 
 
 # =======================

@@ -12,16 +12,12 @@ type AnalysisRes = {
 export default function SubmissionPage() {
   const { id } = useParams()
   const nav = useNavigate()
+
   const [analysis, setAnalysis] = useState<AnalysisRes | null>(null)
 
-  // Obtener problemId de la URL - FORMA CORRECTA
+  // Obtener problemId de la URL
   const urlParams = new URLSearchParams(window.location.search);
   const problemId = urlParams.get('problemId') || 'unknown';
-
-  // DEBUG
-  console.log('Submission ID:', id);
-  console.log('Problem ID from URL:', problemId);
-  console.log('Full URL:', window.location.href);
 
   const { data: sub, isLoading, isFetching } = useQuery({
     queryKey: ['submission', id],
@@ -33,22 +29,30 @@ export default function SubmissionPage() {
     }
   })
 
+  // Cuando el Evaluator termina (status === 'done'), disparamos el Analyzer (IA)
   useEffect(() => {
     async function run() {
-      if (sub && sub.status === 'done' && !analysis) {
-        console.log('Enviando al Analyzer - problemId:', problemId);
+      if (!sub) return
+      if (sub.status !== 'done') return
+      if (analysis) return   // ya tenemos feedback, no repetir
+
+      try {
         const a = await analyzeSolution({
           source: '// código del usuario',
           results: sub,
           problemId: problemId
         })
         setAnalysis(a)
+      } catch (err) {
+        console.error('Error llamando al Analyzer:', err)
       }
     }
     run()
   }, [sub, analysis, problemId])
 
-  if (isLoading || !sub) return <p style={{padding:16}}>Cargando…</p>
+  if (isLoading || !sub) {
+    return <p style={{ padding: 16 }}>Cargando…</p>
+  }
 
   return (
     <div style={{ display: 'grid', gap: 16, padding: 16 }}>
@@ -81,7 +85,15 @@ export default function SubmissionPage() {
       <div style={{ borderTop: '1px solid #eee', paddingTop: 8 }}>
         <h3>Feedback del Coach</h3>
 
-        {analysis ? (
+        {/* Mientras NO tengamos análisis, mostramos siempre este mensaje */}
+        {!analysis && (
+          <p style={{ fontSize: 14, color: '#666' }}>
+            Preparando feedback del Coach (IA)…
+          </p>
+        )}
+
+        {/* Cuando ya hay análisis, mostramos las pistas y la info extra */}
+        {analysis && (
           <>
             <ul>
               {analysis.hints.map((h, i) => (
@@ -101,13 +113,8 @@ export default function SubmissionPage() {
               </div>
             ) : null}
           </>
-        ) : (
-          <p style={{ fontSize: 14, color: '#666' }}>
-            Cargando feedback del Coach (IA)…
-          </p>
         )}
       </div>
-
     </div>
   )
 }

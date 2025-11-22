@@ -12,7 +12,7 @@ import type {
 
 
 // URLs base de cada microservicio
-const PM_BASE = 'http://localhost:8081' // Problem Manager (Python + Mongo)
+const PM_BASE = 'http://localhost:8084' // Problem Manager (Python + Mongo)
 const EV_BASE = 'http://localhost:8082' // Evaluator (C++)
 const AN_BASE = 'http://localhost:8083' // Analyzer (C++)
 

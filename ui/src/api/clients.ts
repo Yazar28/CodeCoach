@@ -7,77 +7,81 @@ import type {
   SubmissionStatus,
   AnalysisReq,
   AnalysisRes,
-  CreateProblemReq, 
+  CreateProblemReq,
 } from '../types'
-
 
 // URLs base de cada microservicio
 const PM_BASE = 'http://localhost:8084' // Problem Manager (Python + Mongo)
 const EV_BASE = 'http://localhost:8082' // Evaluator (C++)
-const AN_BASE = 'http://localhost:8083' // Analyzer (C++)
+const AN_BASE = 'http://localhost:8083' // Analyzer (C++ que llama al LLM)
 
-// Helper genérico para hacer fetch y parsear JSON tipado
-async function jsonFetch<T>(url: string, options?: RequestInit): Promise<T> {
+// Helper genérico para llamadas JSON
+async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
-    ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(options?.headers || {}),
+      ...(init && init.headers ? init.headers : {}),
     },
+    ...init,
   })
 
   if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Error HTTP ${res.status} en ${url}: ${text}`)
+    const text = await res.text()
+    throw new Error(`Error HTTP ${res.status} al llamar ${url}: ${text}`)
+  }
+
+  if (res.status === 204) {
+    return undefined as unknown as T
   }
 
   return (await res.json()) as T
 }
 
-// =========== PROBLEM MANAGER ===========
+// =====================
+//  Problem Manager (PM)
+// =====================
 
-// Lista de problemas (se usa en ProblemsPage)
 export async function listProblems(): Promise<ProblemSummary[]> {
   return jsonFetch<ProblemSummary[]>(`${PM_BASE}/problems`)
 }
 
-// Problema completo por id (se usa en ProblemDetailPage)
 export async function getProblem(id: string): Promise<Problem> {
-  return jsonFetch<Problem>(`${PM_BASE}/problems/${id}`)
+  return jsonFetch<Problem>(`${PM_BASE}/problems/${encodeURIComponent(id)}`)
 }
 
-// Crear un problema nuevo (modo admin)
-export async function createProblem(
-  body: CreateProblemReq
-): Promise<{ id: string }> {
+export async function createProblem(body: CreateProblemReq): Promise<{ id: string }> {
   return jsonFetch<{ id: string }>(`${PM_BASE}/problems`, {
     method: 'POST',
     body: JSON.stringify(body),
   })
 }
-// =========== EVALUATOR ===========
 
-// Crear una nueva ejecución de código
-export async function submitSolution(
-  body: PostSubmissionReq
-): Promise<PostSubmissionRes> {
+export async function deleteProblem(id: string): Promise<void> {
+  await jsonFetch<unknown>(`${PM_BASE}/problems/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+}
+
+// =================
+//  Evaluator (EV)
+// =================
+
+export async function submitSolution(body: PostSubmissionReq): Promise<PostSubmissionRes> {
   return jsonFetch<PostSubmissionRes>(`${EV_BASE}/submissions`, {
     method: 'POST',
     body: JSON.stringify(body),
   })
 }
 
-// Consultar estado de una ejecución
 export async function getSubmission(id: string): Promise<SubmissionStatus> {
-  return jsonFetch<SubmissionStatus>(`${EV_BASE}/submissions/${id}`)
+  return jsonFetch<SubmissionStatus>(`${EV_BASE}/submissions/${encodeURIComponent(id)}`)
 }
 
-// =========== ANALYZER / COACH ===========
+// =================
+//  Analyzer (AN)
+// =================
 
-// Enviar resultados + código al Analyzer
-export async function analyzeSolution(
-  body: AnalysisReq
-): Promise<AnalysisRes> {
+export async function analyzeSolution(body: AnalysisReq): Promise<AnalysisRes> {
   return jsonFetch<AnalysisRes>(`${AN_BASE}/analysis`, {
     method: 'POST',
     body: JSON.stringify(body),

@@ -19,32 +19,22 @@ sample_problems = [
         "title": "Two Sum",
         "difficulty": "easy",
         "tags": ["array", "hash-table"],
-        # >>> LO QUE LA UI ESPERA <<<
-        "statement": (
-            "Given an array of integers nums and an integer target, "
-            "return indices of the two numbers such that they add up to target."
-        ),
-        # Ejemplos que se muestran al usuario
+        "statement": "Dado un arreglo de enteros nums y un entero target, devuelve los índices de los dos números tales que sumen target.",
         "examples": [
             {
                 "in": "nums = [2,7,11,15], target = 9",
-                "out": "[0,1]",
-            },
-            {
-                "in": "nums = [3,2,4], target = 6",
-                "out": "[1,2]",
-            },
+                "out": "[0,1]"
+            }
         ],
-        # Código base para el editor
         "starterCode": (
             "class Solution {\n"
             "public:\n"
             "    vector<int> twoSum(vector<int>& nums, int target) {\n"
             "        // tu código aquí\n"
+            "        return {};\n"
             "    }\n"
             "};\n"
         ),
-        # Tests que luego puede usar el Evaluator
         "tests": [
             {
                 "in": {"nums": [2, 7, 11, 15], "target": 9},
@@ -60,21 +50,13 @@ sample_problems = [
         "id": "reverse-string",
         "title": "Reverse String",
         "difficulty": "easy",
-        "tags": ["string", "two-pointers"],
-        "statement": (
-            "Write a function that reverses a string. The input string is given "
-            "as an array of characters s. You must do this by modifying the input "
-            "array in-place with O(1) extra memory."
-        ),
+        "tags": ["two-pointers", "string"],
+        "statement": "Escribe una función que invierta un arreglo de caracteres in-place.",
         "examples": [
             {
-                "in": 's = ["h","e","l","l","o"]',
-                "out": '["o","l","l","e","h"]',
-            },
-            {
-                "in": 's = ["H","a","n","n","a","h"]',
-                "out": '["h","a","n","n","a","H"]',
-            },
+                "in": "s = ['h','e','l','l','o']",
+                "out": "['o','l','l','e','h']",
+            }
         ],
         "starterCode": (
             "class Solution {\n"
@@ -95,41 +77,108 @@ sample_problems = [
             },
         ],
     },
+    {
+        "id": "binary-search",
+        "title": "Binary Search",
+        "difficulty": "easy",
+        "tags": ["array", "binary-search"],
+        "statement": "Dado un arreglo ordenado nums y un entero target, devuelve el índice de target o -1 si no está.",
+        "examples": [
+            {
+                "in": "nums = [-1,0,3,5,9,12], target = 9",
+                "out": "4",
+            }
+        ],
+        "starterCode": (
+            "class Solution {\n"
+            "public:\n"
+            "    int search(vector<int>& nums, int target) {\n"
+            "        // tu código aquí\n"
+            "        return -1;\n"
+            "    }\n"
+            "};\n"
+        ),
+        "tests": [
+            {
+                "in": {"nums": [-1, 0, 3, 5, 9, 12], "target": 9},
+                "out": 4,
+            },
+            {
+                "in": {"nums": [-1, 0, 3, 5, 9, 12], "target": 2},
+                "out": -1,
+            },
+            {
+                "in": {"nums": [1], "target": 1},
+                "out": 0,
+            },
+            {
+                "in": {"nums": [1], "target": 2},
+                "out": -1,
+            },
+        ],
+    },
 ]
 
-# Por ahora: limpiamos y sembramos siempre (útil en desarrollo)
-if problems_collection.count_documents({}) == 0:
-    problems_collection.insert_many(sample_problems)
-    print("✅ Colección vacía, 2 problemas insertados en MongoDB (seed inicial)")
-else:
-    print("ℹ️ Colección ya tiene problemas, no se ejecuta el seed inicial")
+
+def ensure_seed_data():
+    """Inserta problemas de ejemplo si la colección está vacía."""
+    if problems_collection.count_documents({}) == 0:
+        problems_collection.insert_many(sample_problems)
+        print("🌱 Seed de problemas insertado en MongoDB")
 
 
 # =======================
-#        ENDPOINTS
+#  Rutas del API
 # =======================
+
 
 @app.route("/problems", methods=["GET"])
-def get_problems():
-    problems = list(problems_collection.find({}, {"_id": 0}))
-    return jsonify(problems)
-
+def list_problems():
+    """Devuelve lista de problemas (resumen)."""
+    docs = problems_collection.find(
+        {},
+        {
+            "_id": 0,
+            "id": 1,
+            "title": 1,
+            "difficulty": 1,
+            "tags": 1,
+        },
+    )
+    return jsonify(list(docs))
 
 @app.route("/problems/<problem_id>", methods=["GET"])
 def get_problem(problem_id):
+    """Devuelve el problema completo por id."""
     problem = problems_collection.find_one({"id": problem_id}, {"_id": 0})
     if problem:
         return jsonify(problem)
     return jsonify({"error": "Problem not found"}), 404
 
-
 @app.route("/problems", methods=["POST"])
 def create_problem():
+    """Crea un problema nuevo a partir del JSON enviado por la UI."""
     data = request.json or {}
-    result = problems_collection.insert_one(data)
-    return jsonify({"id": data.get("id", str(result.inserted_id))}), 201
+    if "id" not in data:
+        return jsonify({"error": "field 'id' is required"}), 400
 
+    # Evitar duplicados por id
+    existing = problems_collection.find_one({"id": data["id"]})
+    if existing:
+        return jsonify({"error": f"Problem with id '{data['id']}' already exists"}), 409
+
+    problems_collection.insert_one(data)
+    return jsonify({"id": data["id"]}), 201
+
+@app.route("/problems/<problem_id>", methods=["DELETE"])
+def delete_problem(problem_id):
+    """Elimina un problema por id."""
+    result = problems_collection.delete_one({"id": problem_id})
+    if result.deleted_count == 0:
+        return jsonify({"error": "Problem not found"}), 404
+    return jsonify({"status": "deleted", "id": problem_id}), 200
 
 if __name__ == "__main__":
+    ensure_seed_data()
     print("🚀 Problem Manager Python iniciando en http://localhost:8081")
     app.run(host="0.0.0.0", port=8081, debug=True)

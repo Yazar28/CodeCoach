@@ -100,18 +100,6 @@ export default function SubmissionPage() {
                 <li key={i}>{h}</li>
               ))}
             </ul>
-
-            {analysis.probablePatterns?.length ? (
-              <div style={{ fontSize: 12, color: '#666' }}>
-                Patrones detectados: {analysis.probablePatterns.join(', ')}
-              </div>
-            ) : null}
-
-            {analysis.complexityEstimate ? (
-              <div style={{ fontSize: 12, color: '#666' }}>
-                Complejidad estimada: {analysis.complexityEstimate}
-              </div>
-            ) : null}
           </>
         )}
       </div>

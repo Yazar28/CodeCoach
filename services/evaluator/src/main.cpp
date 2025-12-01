@@ -51,13 +51,14 @@ static std::string rand_id(const std::string& pfx = "sub-") {
     static std::mt19937_64 rng{ std::random_device{}() };
     static const char* K = "abcdefghijklmnopqrstuvwxyz0123456789";
     std::string s = pfx;
-    for (int i = 0;i < 6;++i) s += K[rng() % 36];
+    for (int i = 0; i < 6; ++i) s += K[rng() % 36];
     return s;
 }
 
 static std::string read_file(const fs::path& p) {
     std::ifstream f(p, std::ios::binary);
-    std::ostringstream ss; ss << f.rdbuf();
+    std::ostringstream ss;
+    ss << f.rdbuf();
     return ss.str();
 }
 
@@ -69,10 +70,10 @@ static void write_file(const fs::path& p, const std::string& s) {
 static std::string find_compiler() {
 #ifdef _WIN32
     const char* CAND[] = {
-      "C:\\\\Program Files\\\\LLVM\\\\bin\\\\clang++.exe",
-      "C:\\\\msys64\\\\mingw64\\\\bin\\\\g++.exe",
-      "clang++",
-      "g++"
+        "C:\\\\Program Files\\\\LLVM\\\\bin\\\\clang++.exe",
+        "C:\\\\msys64\\\\mingw64\\\\bin\\\\g++.exe",
+        "clang++",
+        "g++"
     };
     for (auto c : CAND) {
         std::string cmd = "\""; cmd += c; cmd += "\" --version >NUL 2>&1";
@@ -86,7 +87,7 @@ static std::string find_compiler() {
 #endif
 }
 
-// ========== TWO SUM HARNESS ==========
+// ======================= TWO SUM HARNESS =======================
 static std::string make_two_sum_harness() {
     return R"(#include <iostream>
 #include <vector>
@@ -114,11 +115,13 @@ string to_str(const vector<int>& v) {
 }
 
 int main() {
+    // Caso 1
     vector<int> nums1 = {2,7,11,15};
     int target1 = 9;
     auto result1 = twoSum(nums1, target1);
     cout << to_str(result1) << endl;
     
+    // Caso 2
     vector<int> nums2 = {3,2,4};
     int target2 = 6;
     auto result2 = twoSum(nums2, target2);
@@ -129,7 +132,7 @@ int main() {
 )";
 }
 
-// ========== REVERSE STRING HARNESS ==========
+// =================== REVERSE STRING HARNESS ====================
 static std::string make_reverse_string_harness() {
     return R"(#include <iostream>
 #include <vector>
@@ -151,10 +154,12 @@ string to_str(const vector<char>& v) {
 }
 
 int main() {
+    // Caso 1: "hello" -> "olleh"
     vector<char> s1 = {'h','e','l','l','o'};
     reverseString(s1);
     cout << to_str(s1) << endl;
     
+    // Caso 2: "Hannah" -> "hannaH"
     vector<char> s2 = {'H','a','n','n','a','h'};
     reverseString(s2);
     cout << to_str(s2) << endl;
@@ -164,7 +169,7 @@ int main() {
 )";
 }
 
-// ========== BINARY SEARCH HARNESS ==========
+// ==================== BINARY SEARCH HARNESS ====================
 static std::string make_binary_search_harness() {
     return R"(#include <iostream>
 #include <vector>
@@ -172,10 +177,11 @@ using namespace std;
 
 #include "user.cpp"
 
-// Wrapper que llama a Solution::search
+// Llama a Solution::search
 int search_wrapper(const vector<int>& nums, int target) {
     Solution sol;
-    return sol.search(nums, target);
+    vector<int> copy = nums;
+    return sol.search(copy, target);
 }
 
 int main() {
@@ -183,32 +189,68 @@ int main() {
         vector<int> nums = {-1,0,3,5,9,12};
         int target = 9;
         int res = search_wrapper(nums, target);
-        cout << res << "\n";
+        cout << res << "\n";   // Esperado: 4
     }
     {
         vector<int> nums = {-1,0,3,5,9,12};
         int target = 2;
         int res = search_wrapper(nums, target);
-        cout << res << "\n";
+        cout << res << "\n";   // Esperado: -1
     }
     {
         vector<int> nums = {1};
         int target = 1;
         int res = search_wrapper(nums, target);
-        cout << res << "\n";
+        cout << res << "\n";   // Esperado: 0
     }
     {
         vector<int> nums = {1};
         int target = 2;
         int res = search_wrapper(nums, target);
-        cout << res << "\n";
+        cout << res << "\n";   // Esperado: -1
     }
     return 0;
 }
 )";
 }
 
-// ========== PIPELINE GENÉRICO ==========
+// ================== COUNT NEGATIVES HARNESS ====================
+static std::string make_count_negatives_harness() {
+    return R"(#include <iostream>
+#include <vector>
+using namespace std;
+
+#include "user.cpp"
+
+// Se asume que Solution tiene:
+// int solve(vector<int>& nums);
+int solve_wrapper(vector<int> nums) {
+    Solution sol;
+    return sol.solve(nums);
+}
+
+int main() {
+    {
+        vector<int> nums = {-1, 2, -5, 7};
+        int res = solve_wrapper(nums);
+        cout << res << "\n";   // Esperado: 2
+    }
+    {
+        vector<int> nums = {-1, -2, -3};
+        int res = solve_wrapper(nums);
+        cout << res << "\n";   // Esperado: 3
+    }
+    {
+        vector<int> nums = {3, 4, 1};
+        int res = solve_wrapper(nums);
+        cout << res << "\n";   // Esperado: 0
+    }
+    return 0;
+}
+)";
+}
+
+// ======================= PIPELINE GENÉRICO =====================
 static void run_pipeline(const std::string& id,
     const std::string& userSource,
     const std::string& problemType) {
@@ -219,11 +261,8 @@ static void run_pipeline(const std::string& id,
     if (compiler.empty()) {
         std::lock_guard<std::mutex> lk(DBM);
         DB[id].status = "done";
-        DB[id].errorMsg = "No compiler found";
-        DB[id].results = json::array({
-            json{{"case",1},{"pass",false},{"stdout",""},{"timeMs",0}},
-            json{{"case",2},{"pass",false},{"stdout",""},{"timeMs",0}}
-            });
+        DB[id].errorMsg = "No se encontró compilador C++";
+        DB[id].results = json::array();
         return;
     }
 
@@ -235,20 +274,32 @@ static void run_pipeline(const std::string& id,
 
     write_file(userp, userSource);
 
+    // Elegir harness según el tipo de problema
     std::string harness;
+    std::vector<std::string> expected_outputs;
+
     if (problemType == "two-sum") {
         harness = make_two_sum_harness();
+        expected_outputs = { "[0,1]", "[1,2]" };
     }
     else if (problemType == "reverse-string") {
         harness = make_reverse_string_harness();
+        expected_outputs = { "olleh", "hannaH" };
     }
     else if (problemType == "binary-search") {
         harness = make_binary_search_harness();
+        expected_outputs = { "4", "-1", "0", "-1" };
+    }
+    else if (problemType == "count-negatives") {
+        harness = make_count_negatives_harness();
+        expected_outputs = { "2", "3", "0" };
     }
     else {
-        // fallback por si llega algo inesperado
+        // Fallback: usa two-sum si llega algo inesperado
         harness = make_two_sum_harness();
+        expected_outputs = { "[0,1]", "[1,2]" };
     }
+
     write_file(mainp, harness);
 
 #ifdef _WIN32
@@ -259,13 +310,25 @@ static void run_pipeline(const std::string& id,
     std::string tmpS = tmp.string();
 #endif
 
+    // Compilar
     std::ostringstream ccmd;
+#ifdef _WIN32
     ccmd << "cmd /S /C \"cd /d \"" << tmpS
         << "\" && \"" << compS
         << "\" -std=c++17 -O2 -o a.exe main.cpp > compile.err 2>&1\"";
+#else
+    ccmd << "cd \"" << tmpS << "\" && \"" << compS
+        << "\" -std=c++17 -O2 -o a.out main.cpp > compile.err 2>&1";
+#endif
 
     int cexit = std::system(ccmd.str().c_str());
     std::string cerrtxt = read_file(tmp / "compile.err");
+
+#ifdef _WIN32
+    std::string exeName = "a.exe";
+#else
+    std::string exeName = "a.out";
+#endif
 
     if (cexit != 0) {
         std::lock_guard<std::mutex> lk(DBM);
@@ -274,17 +337,25 @@ static void run_pipeline(const std::string& id,
         return;
     }
 
+    // Ejecutar
     std::ostringstream rcmd;
-    rcmd << "cmd /S /C \"cd /d \"" << tmpS << "\" && \"a.exe\" > run.out 2>&1\"";
+#ifdef _WIN32
+    rcmd << "cmd /S /C \"cd /d \"" << tmpS << "\" && \"" << exeName
+        << "\" > run.out 2>&1\"";
+#else
+    rcmd << "cd \"" << tmpS << "\" && \"" << exeName
+        << "\" > run.out 2>&1";
+#endif
 
     auto t0 = std::chrono::steady_clock::now();
     int rexit = std::system(rcmd.str().c_str());
     auto t1 = std::chrono::steady_clock::now();
+    (void)rexit;
 
     int totalMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
     std::string out = read_file(tmp / "run.out");
 
-    // Limpiar salida - eliminar retornos de carro
+    // Limpiar \r de Windows
     out.erase(std::remove(out.begin(), out.end(), '\r'), out.end());
 
     std::vector<std::string> lines;
@@ -297,34 +368,20 @@ static void run_pipeline(const std::string& id,
     }
 
     json results = json::array();
-
-    std::vector<std::string> expected_outputs;
-    if (problemType == "two-sum") {
-        expected_outputs = { "[0,1]", "[1,2]" };
-    }
-    else if (problemType == "reverse-string") {
-        expected_outputs = { "olleh", "hannaH" };
-    }
-    else if (problemType == "binary-search") {
-        // Debe coincidir con lo que imprime el harness
-        expected_outputs = { "4", "-1", "0", "-1" };
-    }
-    else {
-        expected_outputs = {};
-    }
+    int ncases = (int)expected_outputs.size();
+    int perCaseMs = (ncases > 0) ? totalMs / ncases : totalMs;
 
     for (size_t i = 0; i < expected_outputs.size(); ++i) {
         std::string expected = expected_outputs[i];
         std::string obtained = (i < lines.size()) ? lines[i] : "";
 
-        // Comparación exacta
         bool pass = (expected == obtained);
 
         results.push_back(json{
-            {"case", (int)i + 1},
-            {"pass", pass},
+            {"case",  (int)i + 1},
+            {"pass",  pass},
             {"stdout", obtained},
-            {"timeMs", totalMs / 2}
+            {"timeMs", perCaseMs}
             });
     }
 
@@ -334,14 +391,16 @@ static void run_pipeline(const std::string& id,
     DB[id].timeMs = totalMs;
 }
 
-// ========== SERVER ==========
+// =========================== SERVER ============================
 int main() {
     httplib::Server svr;
 
     svr.Options(R"(/.*)", [](const httplib::Request&, httplib::Response& res) {
-        set_cors(res); res.status = 200;
+        set_cors(res);
+        res.status = 200;
         });
 
+    // Crear submission
     svr.Post("/submissions", [](const httplib::Request& req, httplib::Response& res) {
         set_cors(res);
 
@@ -383,6 +442,7 @@ int main() {
         res.set_content(out.dump(), "application/json");
         });
 
+    // Consultar submission
     svr.Get(R"(/submissions/([A-Za-z0-9\-]+))", [](const httplib::Request& req, httplib::Response& res) {
         set_cors(res);
         auto id = req.matches[1].str();
